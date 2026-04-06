@@ -446,6 +446,9 @@ namespace ACadSharp
 					}
 					this.TableStyles.TryAdd(tableStyle);
 					break;
+				case Layout layout:
+					this.Header.ShowModelSpace = !layout.IsPaperSpace;
+					break;
 				default:
 					throw new NotSupportedException($"The type {typeof(T)} is not a configurable type in the document.");
 			}
