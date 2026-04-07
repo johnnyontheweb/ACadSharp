@@ -16,7 +16,6 @@ namespace ACadSharp.Examples
 		static void Main(string[] args)
 		{
 			CreateDwgWithA4Layout("output_a4_example.dwg");
-			// Analizza prima il file di esempio per capire come sono strutturati i viewport
 			//Console.WriteLine("=== ANALYZING SAMPLE FILE ===");
 			//AnalyzeSampleViewports.AnalyzeSample();
 
@@ -85,10 +84,7 @@ namespace ACadSharp.Examples
 
 		static void CreateDwgWithA4Layout(string outFile)
 		{
-			// 1. Crea un nuovo documento (default AC1032 / 2018)
 			CadDocument doc = new CadDocument();
-
-			// 2. Disegna alcune linee nel ModelSpace
 			Line line1 = new Line
 			{
 				StartPoint = new XYZ(0, 0, 0),
@@ -106,8 +102,6 @@ namespace ACadSharp.Examples
 			doc.Entities.Add(line1);
 			doc.Entities.Add(line2);
 
-			// 3. Configura il PaperSpace (Layout1) per A4
-			// La collezione doc.Layouts contiene già "Model" e "Layout1" di default
 			if (doc.Layouts.TryGet("Layout1", out Layout layout))
 			{
 				layout.PaperSize = "ISO_A4_(210.00_x_297.00_MM)";
@@ -115,21 +109,14 @@ namespace ACadSharp.Examples
 				layout.PaperWidth = 297.0;
 				layout.PaperUnits = PlotPaperUnits.Millimeters;
 
-				// Inserisci il Viewport effettivo per visualizzare il Model (Id > 1)
-				// IMPORTANTE: Il primo viewport nella lista ottiene ID=1, che lo rende un "paper viewport".
-				// Quindi deve essere aggiunto PRIMA di qualsiasi altro elemento decorativo.
 				Viewport vp = new Viewport
 				{
 					Center = new XYZ(148.5, 105, 0),
 					Width = 200,
 					Height = 150,
-
-					// Inquadratura del ModelSpace
-					// Vogliamo vedere la croce che è centrata in (50, 50) e larga 100
 					ViewCenter = new XY(50, 50),
-					ViewHeight = 120, // Leggermente più grande della croce per vederla tutta
+					ViewHeight = 120,
 
-					// CRUCIALE: Questi due valori sono obbligatori!
 					ViewTarget = new XYZ(50, 50, 0),
 					ViewDirection = new XYZ(0, 0, 1),
 
@@ -139,7 +126,6 @@ namespace ACadSharp.Examples
 				//layout.AssociatedBlock.Entities.Add(vp);
 				doc.PaperSpace.Entities.Add(vp);
 
-				// Bordo del foglio
 				LwPolyline border = new LwPolyline();
 				border.Vertices.Add(new LwPolyline.Vertex(new XY(5, 5)));
 				border.Vertices.Add(new LwPolyline.Vertex(new XY(292, 5)));
@@ -148,18 +134,13 @@ namespace ACadSharp.Examples
 				border.IsClosed = true;
 				border.Color = Color.Blue;
 				layout.AssociatedBlock.Entities.Add(border);
-
-				// 3. Imposta il layout come corrente
-				//doc.SetCurrent(layout);
 			}
 
-			// 5. Scrivi il file DWG
 			using (DwgWriter writer = new DwgWriter(outFile, doc))
 			{
 				writer.Write();
 			}
-
-			Console.WriteLine($"File DWG creato con successo: {outFile}");
+			Console.WriteLine($"Successfully created: {outFile}");
 		}
 	}
 }
