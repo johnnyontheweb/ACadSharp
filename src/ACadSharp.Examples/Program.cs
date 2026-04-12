@@ -109,15 +109,43 @@ namespace ACadSharp.Examples
 				layout.PaperWidth = 297.0;
 				layout.PaperUnits = PlotPaperUnits.Millimeters;
 
+				// Viewport centrato sulla carta A4
+				// Margini: 5mm su tutti i lati
+				double paperWidth = 297.0;
+				double paperHeight = 210.0;
+				double margin = 5.0;
+
+				double viewportWidth = paperWidth - 2 * margin;   // 287mm
+				double viewportHeight = paperHeight - 2 * margin;  // 200mm
+				double centerX = paperWidth / 2;                   // 148.5mm
+				double centerY = paperHeight / 2;                  // 105mm
+
+				// Calcolo della scala: vogliamo vedere l'area 0-100 in entrambi gli assi
+				// con un piccolo margine intorno
+				// ViewHeight è in unità model space
+				// Height è in unità paper space (mm)
+				// La formula è: ViewWidth/ViewHeight = Width/Height (rapporto di aspetto)
+				// Se vogliamo mostrare area da 0-100, con margine 10, abbiamo bisogno di 120 unità
+				double viewHeight = 120.0;      // 120 unità model space (mostra 0-100 con margine)
+				double viewWidth = viewHeight * (viewportWidth / viewportHeight);  // Mantiene rapporto
+
+				double viewCenterX = 50.0;     // Centro a X=50 (centro dell'area 0-100)
+				double viewCenterY = 50.0;     // Centro a Y=50 (centro dell'area 0-100)
+
+				Console.WriteLine($"DEBUG - Scala viewport:");
+				Console.WriteLine($"  Paper: {viewportWidth}mm x {viewportHeight}mm");
+				Console.WriteLine($"  Model: {viewWidth} x {viewHeight} unità");
+				Console.WriteLine($"  Scala: {viewWidth/viewportWidth} unità/mm (X), {viewHeight/viewportHeight} unità/mm (Y)");
+
 				Viewport vp = new Viewport
 				{
-					Center = new XYZ(148.5, 105, 0),
-					Width = 200,
-					Height = 150,
-					ViewCenter = new XY(50, 50),
-					ViewHeight = 120,
+					Center = new XYZ(centerX, centerY, 0),
+					Width = viewportWidth,
+					Height = viewportHeight,
+					//ViewCenter = new XY(viewCenterX, viewCenterY), // no, è in DCS
+					ViewHeight = viewHeight,
 
-					ViewTarget = new XYZ(50, 50, 0),
+					ViewTarget = new XYZ(viewCenterX, viewCenterY, 0),
 					ViewDirection = new XYZ(0, 0, 1),
 
 					Status = ViewportStatusFlags.UcsIconVisibility | ViewportStatusFlags.FastZoom | ViewportStatusFlags.CurrentlyAlwaysEnabled
@@ -127,13 +155,41 @@ namespace ACadSharp.Examples
 				doc.PaperSpace.Entities.Add(vp);
 
 				LwPolyline border = new LwPolyline();
-				border.Vertices.Add(new LwPolyline.Vertex(new XY(5, 5)));
-				border.Vertices.Add(new LwPolyline.Vertex(new XY(292, 5)));
-				border.Vertices.Add(new LwPolyline.Vertex(new XY(292, 205)));
-				border.Vertices.Add(new LwPolyline.Vertex(new XY(5, 205)));
+				border.Vertices.Add(new LwPolyline.Vertex(new XY(margin, margin)));
+				border.Vertices.Add(new LwPolyline.Vertex(new XY(paperWidth - margin, margin)));
+				border.Vertices.Add(new LwPolyline.Vertex(new XY(paperWidth - margin, paperHeight - margin)));
+				border.Vertices.Add(new LwPolyline.Vertex(new XY(margin, paperHeight - margin)));
 				border.IsClosed = true;
 				border.Color = Color.Blue;
 				layout.AssociatedBlock.Entities.Add(border);
+
+				// table
+				TableEntity table = new TableEntity
+				{
+					InsertPoint = new XYZ(50, 50, 0),
+					HorizontalDirection = new XYZ(1, 0, 0)
+				};
+				table.Columns.Add(new TableEntity.Column { Width = 40 });
+				table.Columns.Add(new TableEntity.Column { Width = 40 });
+				table.Columns.Add(new TableEntity.Column { Width = 40 });
+				for (int i = 0; i < 3; i++)
+				{
+					var row = new TableEntity.Row { Height = 10 };
+					for (int j = 0; j < 3; j++)
+					{
+						var cell = new TableEntity.Cell();
+						var content = new TableEntity.CellContent();
+						content.ContentType = TableEntity.TableCellContentType.Value;
+						cell.Contents.Add(content);
+						row.Cells.Add(cell);
+					}
+					table.Rows.Add(row);
+				}
+				table.GetCell(0, 0).Content.CadValue.SetValue("Title 1", CadValueType.String);
+				table.GetCell(0, 1).Content.CadValue.SetValue("Title 2", CadValueType.String);
+				table.GetCell(1, 0).Content.CadValue.SetValue("Data 1", CadValueType.String);
+
+				layout.AssociatedBlock.Entities.Add(table);
 			}
 
 			using (DwgWriter writer = new DwgWriter(outFile, doc))
