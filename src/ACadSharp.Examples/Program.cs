@@ -5,6 +5,7 @@ using ACadSharp.Tables;
 using ACadSharp.Tables.Collections;
 using CSMath;
 using System;
+using System.IO;
 using System.Linq;
 
 namespace ACadSharp.Examples
@@ -197,6 +198,12 @@ namespace ACadSharp.Examples
 				writer.Write();
 			}
 			Console.WriteLine($"Successfully created: {outFile}");
+
+			// dxf test with stream
+			MemoryStream ms = new MemoryStream();
+			DxfWriterConfiguration config = new DxfWriterConfiguration(); config.CloseStream = false;
+			DxfWriter.Write(ms, doc, false, config);
+			Console.WriteLine($"Successfully created DXF in memory stream, is open: {ms.CanSeek}");
 		}
 	}
 }
