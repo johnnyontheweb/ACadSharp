@@ -103,6 +103,47 @@ namespace ACadSharp.Examples
 			doc.Entities.Add(line1);
 			doc.Entities.Add(line2);
 
+
+			// Hatch circolare
+			Hatch hatch = new Hatch();
+			hatch.IsSolid = true;
+			hatch.Pattern = HatchPattern.Solid;
+			hatch.Color = Color.Yellow;
+
+			// Creazione del cerchio per il bordo
+			Circle circle = new Circle
+			{
+				Center = new XYZ(50, 50, 0),
+				Radius = 20,
+				Color = Color.Cyan
+			};
+
+			// Percorso di confine (Boundary Path)
+			Hatch.BoundaryPath path = new Hatch.BoundaryPath();
+			path.Edges.Add(new Hatch.BoundaryPath.Arc(circle));
+			hatch.Paths.Add(path);
+
+			doc.Entities.Add(circle);
+			doc.Entities.Add(hatch);
+
+			// Quotatura lineare (Linear Dimension) per la linea della X
+			DimensionStyle dimStyle = doc.DimensionStyles.FirstOrDefault() ?? DimensionStyle.Default;
+			dimStyle.TextHeight = 5.0; // Aumenta dimensione testo
+			dimStyle.TickSize = 2.0;   // Frecce oblique (tratti) invece di punte di freccia
+
+			DimensionAligned dim = new DimensionAligned
+			{
+				FirstPoint = line1.StartPoint,
+				SecondPoint = line1.EndPoint,
+				Style = dimStyle,
+				Offset = 15,
+				Color = Color.Magenta
+			};
+
+			doc.Entities.Add(dim);
+
+
+
 			if (doc.Layouts.TryGet("Layout1", out Layout layout))
 			{
 				layout.PaperSize = "ISO_A4_(210.00_x_297.00_MM)";
@@ -191,7 +232,11 @@ namespace ACadSharp.Examples
 				table.GetCell(1, 0).Content.CadValue.SetValue("Data 1", CadValueType.String);
 
 				layout.AssociatedBlock.Entities.Add(table);
+
+				
 			}
+
+
 
 			using (DwgWriter writer = new DwgWriter(outFile, doc))
 			{
