@@ -88,6 +88,7 @@ public abstract class WriterSingleObjectTests : IOTestsBase
 		Data.Add(new(nameof(SingleCaseGenerator.TextAlignment)));
 		Data.Add(new(nameof(SingleCaseGenerator.CreateXRecords)));
 		Data.Add(new(nameof(SingleCaseGenerator.SingleTableEntity)));
+		Data.Add(new(nameof(SingleCaseGenerator.SingleMesh)));
 	}
 
 	public WriterSingleObjectTests(ITestOutputHelper output) : base(output)
@@ -203,6 +204,84 @@ public abstract class WriterSingleObjectTests : IOTestsBase
 		public void AddCustomScale()
 		{
 			this.Document.Scales.Add(new Scale("Hello"));
+		}
+
+		public void AddViewport()
+		{
+			Viewport vp1 = new Viewport
+			{
+				Center = new XYZ(148.5, 105, 0),
+				Width = 50,
+				Height = 50,
+
+				//ViewCenter = new XY(50, 50),
+				//ViewHeight = 120,
+				//ViewTarget = new XYZ(50, 50, 0),
+				//ViewDirection = new XYZ(0, 0, 1),
+
+				Status = ViewportStatusFlags.UcsIconVisibility | ViewportStatusFlags.FastZoom | ViewportStatusFlags.CurrentlyAlwaysEnabled,
+				Color = Color.Yellow,
+			};
+
+			this.Document.Layouts["Layout1"].AddViewport(vp1);
+			var vp2 = vp1.CloneTyped();
+			vp2.Color = Color.Red;
+			vp2.Width = 100;
+			vp2.Height = 100;
+
+			this.Document.PaperSpace.Entities.Add(vp2);
+
+			//CadDocument doc = this.Document;
+			//Line line1 = new Line
+			//{
+			//	StartPoint = new XYZ(0, 0, 0),
+			//	EndPoint = new XYZ(100, 100, 0),
+			//	Color = Color.Red
+			//};
+
+			//Line line2 = new Line
+			//{
+			//	StartPoint = new XYZ(100, 0, 0),
+			//	EndPoint = new XYZ(0, 100, 0),
+			//	Color = Color.Green
+			//};
+
+			//doc.Entities.Add(line1);
+			//doc.Entities.Add(line2);
+
+			//if (doc.Layouts.TryGet("Layout1", out Layout layout))
+			//{
+			//	layout.PaperSize = "ISO_A4_(210.00_x_297.00_MM)";
+			//	layout.PaperHeight = 210.0;
+			//	layout.PaperWidth = 297.0;
+			//	layout.PaperUnits = PlotPaperUnits.Millimeters;
+
+			//	Viewport vp = new Viewport
+			//	{
+			//		Center = new XYZ(148.5, 105, 0),
+			//		Width = 200,
+			//		Height = 150,
+			//		ViewCenter = new XY(50, 50),
+			//		ViewHeight = 120,
+
+			//		ViewTarget = new XYZ(50, 50, 0),
+			//		ViewDirection = new XYZ(0, 0, 1),
+
+			//		Status = ViewportStatusFlags.UcsIconVisibility | ViewportStatusFlags.FastZoom | ViewportStatusFlags.CurrentlyAlwaysEnabled
+			//	};
+
+			//	//layout.AssociatedBlock.Entities.Add(vp);
+			//	doc.PaperSpace.Entities.Add(vp);
+
+			//	LwPolyline border = new LwPolyline();
+			//	border.Vertices.Add(new LwPolyline.Vertex(new XY(5, 5)));
+			//	border.Vertices.Add(new LwPolyline.Vertex(new XY(292, 5)));
+			//	border.Vertices.Add(new LwPolyline.Vertex(new XY(292, 205)));
+			//	border.Vertices.Add(new LwPolyline.Vertex(new XY(5, 205)));
+			//	border.IsClosed = true;
+			//	border.Color = Color.Blue;
+			//	layout.AssociatedBlock.Entities.Add(border);
+			//}
 		}
 
 		public void ArcSegments()
@@ -1316,6 +1395,19 @@ public abstract class WriterSingleObjectTests : IOTestsBase
 			this.Document.Entities.Add(mtext);
 		}
 
+		public void SingleMesh()
+		{
+			Mesh mesh = new Mesh();
+			mesh.Vertices.Add(new XYZ(0, 0, 0));
+			mesh.Vertices.Add(new XYZ(1, 0, 0));
+			mesh.Vertices.Add(new XYZ(1, 1, 0));
+			mesh.Vertices.Add(new XYZ(0, 1, 0));
+
+			mesh.Faces.Add([0, 1, 2, 3]);
+
+			this.Document.Entities.Add(mesh);
+		}
+
 		public void SingleMLeader()
 		{
 			MultiLeader mleader = new MultiLeader();
@@ -1445,17 +1537,6 @@ public abstract class WriterSingleObjectTests : IOTestsBase
 			this.Document.Entities.Add(new Point(XYZ.Zero));
 		}
 
-		public void SingleTableEntity()
-		{
-			//TODO: Generate a valid table entity, currently it creates an invalid one but it is correctly read by AutoCAD
-			var t = new TableEntity();
-
-			t.Columns.Add(new TableEntity.Column() { Width = 10 });
-			t.Rows.Add(new TableEntity.Row() { Height = 5 });
-
-			this.Document.Entities.Add(t);
-		}
-
 		public void SingleRasterImage()
 		{
 			ImageDefinition definition = new ImageDefinition();
@@ -1475,6 +1556,17 @@ public abstract class WriterSingleObjectTests : IOTestsBase
 			raster.ClipBoundaryVertices.Add(new XY(1, 0));
 
 			this.Document.Entities.Add(raster);
+		}
+
+		public void SingleTableEntity()
+		{
+			//TODO: Generate a valid table entity, currently it creates an invalid one but it is correctly read by AutoCAD
+			var t = new TableEntity();
+
+			t.Columns.Add(new TableEntity.Column() { Width = 10 });
+			t.Rows.Add(new TableEntity.Row() { Height = 5 });
+
+			this.Document.Entities.Add(t);
 		}
 
 		public void SingleWipeout()
@@ -1595,84 +1687,6 @@ public abstract class WriterSingleObjectTests : IOTestsBase
 			//active.BottomLeft = (XY)box.Min;
 			//active.TopRight = (XY)box.Max;
 			active.ViewHeight = 100;
-		}
-
-		public void AddViewport()
-		{
-			Viewport vp1 = new Viewport
-			{
-				Center = new XYZ(148.5, 105, 0),
-				Width = 50,
-				Height = 50,
-
-				//ViewCenter = new XY(50, 50),
-				//ViewHeight = 120,
-				//ViewTarget = new XYZ(50, 50, 0),
-				//ViewDirection = new XYZ(0, 0, 1),
-
-				Status = ViewportStatusFlags.UcsIconVisibility | ViewportStatusFlags.FastZoom | ViewportStatusFlags.CurrentlyAlwaysEnabled,
-				Color = Color.Yellow,
-			};
-
-			this.Document.Layouts["Layout1"].AddViewport(vp1);
-			var vp2 = vp1.CloneTyped();
-			vp2.Color = Color.Red;
-			vp2.Width = 100;
-			vp2.Height = 100;
-
-			this.Document.PaperSpace.Entities.Add(vp2);
-
-			//CadDocument doc = this.Document;
-			//Line line1 = new Line
-			//{
-			//	StartPoint = new XYZ(0, 0, 0),
-			//	EndPoint = new XYZ(100, 100, 0),
-			//	Color = Color.Red
-			//};
-
-			//Line line2 = new Line
-			//{
-			//	StartPoint = new XYZ(100, 0, 0),
-			//	EndPoint = new XYZ(0, 100, 0),
-			//	Color = Color.Green
-			//};
-
-			//doc.Entities.Add(line1);
-			//doc.Entities.Add(line2);
-
-			//if (doc.Layouts.TryGet("Layout1", out Layout layout))
-			//{
-			//	layout.PaperSize = "ISO_A4_(210.00_x_297.00_MM)";
-			//	layout.PaperHeight = 210.0;
-			//	layout.PaperWidth = 297.0;
-			//	layout.PaperUnits = PlotPaperUnits.Millimeters;
-
-			//	Viewport vp = new Viewport
-			//	{
-			//		Center = new XYZ(148.5, 105, 0),
-			//		Width = 200,
-			//		Height = 150,
-			//		ViewCenter = new XY(50, 50),
-			//		ViewHeight = 120,
-
-			//		ViewTarget = new XYZ(50, 50, 0),
-			//		ViewDirection = new XYZ(0, 0, 1),
-
-			//		Status = ViewportStatusFlags.UcsIconVisibility | ViewportStatusFlags.FastZoom | ViewportStatusFlags.CurrentlyAlwaysEnabled
-			//	};
-
-			//	//layout.AssociatedBlock.Entities.Add(vp);
-			//	doc.PaperSpace.Entities.Add(vp);
-
-			//	LwPolyline border = new LwPolyline();
-			//	border.Vertices.Add(new LwPolyline.Vertex(new XY(5, 5)));
-			//	border.Vertices.Add(new LwPolyline.Vertex(new XY(292, 5)));
-			//	border.Vertices.Add(new LwPolyline.Vertex(new XY(292, 205)));
-			//	border.Vertices.Add(new LwPolyline.Vertex(new XY(5, 205)));
-			//	border.IsClosed = true;
-			//	border.Color = Color.Blue;
-			//	layout.AssociatedBlock.Entities.Add(border);
-			//}
 		}
 
 		public void XData()
