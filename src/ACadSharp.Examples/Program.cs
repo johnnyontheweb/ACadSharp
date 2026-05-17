@@ -143,8 +143,8 @@ namespace ACadSharp.Examples
 			double paperWidth = width;
 			double paperHeight = height;
 
-			layout.PaperHeight = width;
-			layout.PaperWidth = height;
+			layout.PaperHeight = height;
+			layout.PaperWidth = width;
 			layout.PaperUnits = PlotPaperUnits.Millimeters;
 
 			double viewportWidth = paperWidth - 2 * margin;
@@ -152,29 +152,23 @@ namespace ACadSharp.Examples
 			double centerX = paperWidth / 2;
 			double centerY = paperHeight / 2;
 
-			// Calculate bounding box
-			double minX = double.MaxValue;
-			double minY = double.MaxValue;
-			double maxX = double.MinValue;
-			double maxY = double.MinValue;
-
 			// Get extents from model space entities
+			BoundingBox limits = new BoundingBox();
 			foreach (var entity in drawing.ModelSpace.Entities)
 			{
-				if (entity is Line line)
-				{
-					minX = Math.Min(minX, Math.Min(line.StartPoint.X, line.EndPoint.X));
-					maxX = Math.Max(maxX, Math.Max(line.StartPoint.X, line.EndPoint.X));
-					minY = Math.Min(minY, Math.Min(line.StartPoint.Y, line.EndPoint.Y));
-					maxY = Math.Max(maxY, Math.Max(line.StartPoint.Y, line.EndPoint.Y));
-				}
-				// Add more entity types as needed (Circle, Arc, etc.)
+				limits = limits.Merge(entity.GetBoundingBox());
 			}
+
+			// Calculate bounding box
+			double minX = limits.Min.X;
+			double minY = limits.Min.Y;
+			double maxX = limits.Max.X;
+			double maxY = limits.Max.Y;
 
 			// Calculate viewport dimensions using bounding box
 			// Add 10% margin around the drawing
-			double bbWidth = maxX - minX;
-			double bbHeight = maxY - minY;
+			double bbWidth = limits.LengthX;
+			double bbHeight = limits.LengthY;
 			double marginPercentage = 0.1; // 10% margin
 			double margin3D = Math.Max(bbWidth, bbHeight) * marginPercentage;
 
@@ -197,19 +191,9 @@ namespace ACadSharp.Examples
 				viewWidth = viewHeight * paperAspectRatio;
 			}
 
-			double viewCenterX = minX + bbWidth / 2;  // Center X of bounding box
-			double viewCenterY = minY + bbHeight / 2; // Center Y of bounding box
-
 			// Remove any existing viewports
-			var viewportsToRemove = new System.Collections.Generic.List<Viewport>();
-			foreach (var entity in drawing.PaperSpace.Entities)
-			{
-				if (entity is Viewport vp)
-				{
-					viewportsToRemove.Add(vp);
-				}
-			}
-			foreach (var vp in viewportsToRemove)
+			var viewportsToRemove = drawing.PaperSpace.Entities.OfType<Viewport>();
+			foreach (var vp in drawing.PaperSpace.Entities.OfType<Viewport>())
 			{
 				drawing.PaperSpace.Entities.Remove(vp);
 			}
@@ -218,7 +202,7 @@ namespace ACadSharp.Examples
 			Viewport existingViewport = null;
 			foreach (var entity in drawing.PaperSpace.Entities)
 			{
-				if (entity is Viewport vp)
+				if (entity is Viewport vp && !vp.RepresentsPaper)
 				{
 					existingViewport = vp;
 					break;
@@ -235,7 +219,7 @@ namespace ACadSharp.Examples
 					existingViewport.Width = viewportWidth;
 					existingViewport.Height = viewportHeight;
 					existingViewport.ViewHeight = viewHeight;
-					existingViewport.ViewTarget = new XYZ(viewCenterX, viewCenterY, 0);
+					existingViewport.ViewTarget = new XYZ((double)limits.Center.X, (double)limits.Center.Y, 0);
 					existingViewport.ViewDirection = new XYZ(0, 0, 1);
 					existingViewport.IsInvisible = false;
 					existingViewport.Scale = new Scale("scale") { DrawingUnits = scale, PaperUnits = 1 };
@@ -250,7 +234,7 @@ namespace ACadSharp.Examples
 						Width = viewportWidth,
 						Height = viewportHeight,
 						ViewHeight = viewHeight,
-						ViewTarget = new XYZ(viewCenterX, viewCenterY, 0),
+						ViewTarget = new XYZ((double)limits.Center.X, (double)limits.Center.Y, 0),
 						ViewDirection = new XYZ(0, 0, 1),
 						IsInvisible = false,
 						Scale = new Scale("scale") { DrawingUnits = scale, PaperUnits = 1 },
@@ -262,5 +246,6 @@ namespace ACadSharp.Examples
 			}
 			layout.UpdatePaperViewport();
 		}
+
 	}
 }
