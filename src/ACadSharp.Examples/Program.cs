@@ -102,6 +102,8 @@ namespace ACadSharp.Examples
 
 			SetupLayout(doc, width: 210, height: 297, scale: 1); // A4 paper size in mm with 1:1 scale
 
+			doc.Header.Version = ACadSharp.ACadVersion.AC1015;
+
 			// Save as DWG
 			string dwgPath = "../../../../../samples/output_lines.dwg";
 			using (DwgWriter dwgWriter = new DwgWriter(dwgPath, doc))
