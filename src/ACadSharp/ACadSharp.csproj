@@ -12,6 +12,7 @@
 		<Copyright>Copyright (c) 2026 Albert Domenech</Copyright>
 		<Description>C# library to read/write cad files like dxf/dwg.</Description>
 		<GeneratePackageOnBuild Condition="'$(Configuration)' == 'Release'">True</GeneratePackageOnBuild>
+		<LangVersion>preview</LangVersion>
 	</PropertyGroup>
 
 	<PropertyGroup>
