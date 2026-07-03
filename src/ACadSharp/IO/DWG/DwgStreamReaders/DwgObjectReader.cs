@@ -2,6 +2,7 @@
 using ACadSharp.Classes;
 using ACadSharp.Entities;
 using ACadSharp.Entities.AecObjects;
+using ACadSharp.Entities.Mechanical;
 using ACadSharp.IO.Templates;
 using ACadSharp.Objects;
 using ACadSharp.Objects.AEC;
@@ -316,8 +317,7 @@ namespace ACadSharp.IO.DWG
 
 				//Common:
 				//X: The graphic image
-				//entityHandler.CadObject.JumpGraphicImage(this, entityHandler, graphicImageSize);
-				this._objectReader.Advance((int)graphicImageSize);
+				template.ProxyGraphics = this._objectReader.ReadBytes((int)graphicImageSize);
 			}
 
 			//R13 - R14 Only:
@@ -3240,10 +3240,23 @@ namespace ACadSharp.IO.DWG
 
 			#endregion Refraction
 
-#if TEST
-			var obj = DwgStreamReaderBase.Explore(this._objectReader);
-			var text = DwgStreamReaderBase.Explore(this._textReader);
-#endif
+			// Since R2007a there is a tail block with the render-mode hints.
+			// AutoCAD writes these every time, even when the values are default;
+			// consuming them keeps the in-memory model in sync with the file and
+			// lets ACadSharp round-trip a non-default material (e.g. one with
+			// kMetalShader or a custom channel-flag mask) without losing the choice.
+			// Pre-R2007 MATERIAL objects end after the refraction block, so reading
+			// the tail there would run past the end of the object and corrupt the
+			// stream position for every subsequent object.
+			if (this.R2007Plus)
+			{
+				material.Translucence = this._mergedReaders.ReadBitDouble();
+				material.SelfIllumination = this._mergedReaders.ReadBitDouble();
+				material.Reflectivity = this._mergedReaders.ReadBitDouble();
+				material.IlluminationModel = (MaterialIlluminationModel)this._mergedReaders.ReadBitLong();
+				material.ChannelFlags = (MaterialChannelFlags)this._mergedReaders.ReadBitLong();
+				material.Mode = (MaterialMode)this._mergedReaders.ReadBitLong();
+			}
 
 			return template;
 		}
@@ -3269,7 +3282,7 @@ namespace ACadSharp.IO.DWG
 			matrix.M32 = this._mergedReaders.ReadBitDouble();
 			matrix.M33 = this._mergedReaders.ReadBitDouble();
 
-			return Matrix4.Identity;
+			return matrix;
 		}
 
 		private CadTemplate readMesh()
@@ -5493,6 +5506,15 @@ namespace ACadSharp.IO.DWG
 
 			switch (c.DxfName)
 			{
+				case DxfFileToken.AcmPartRef:
+					template = this.readAcmPartRef();
+					break;
+				case DxfFileToken.AcmBalloon:
+					template = this.readAcmBalloon();
+					break;
+				case DxfFileToken.AcmPartList:
+					template = this.readAcmPartList();
+					break;
 				case DxfFileToken.EntityAecWall:
 					template = this.readAecWall();
 					break;
@@ -5590,6 +5612,9 @@ namespace ACadSharp.IO.DWG
 					break;
 				case DxfFileToken.ObjectEvalGraph:
 					template = this.readEvaluationGraph();
+					break;
+				case DxfFileToken.ObjectBlockLinearParameter:
+					template = this.readBlockLinearParameter();
 					break;
 				case DxfFileToken.ObjectBlockRotationParameter:
 					template = this.readBlockRotationParameter();
@@ -6226,6 +6251,87 @@ namespace ACadSharp.IO.DWG
 		}
 
 		#endregion Insert methods
+
+		private CadTemplate readAcmPartRef()
+		{
+			AcmPartRef partref = new AcmPartRef();
+			CadAcmPartRefTemplate template = new CadAcmPartRefTemplate(partref);
+
+			this.readCommonEntityData(template);
+
+			this.readMechanicalEntity(template);
+
+			template.LineResHandle = this.handleReference();
+			template.UnknownHandle1 = this.handleReference();        // 0x0
+			template.DataEntryPartHandle = this.handleReference();
+
+			template.LayerHandle = this.handleReference();
+
+			return template;
+		}
+
+		private CadTemplate readAcmPartList()
+		{
+			AcmPartList partList = new AcmPartList();
+			CadAcmPartListTemplate template = new(partList);
+
+			this.readCommonEntityData(template);
+
+			this.readMechanicalEntity(template);
+
+			template.BomHandle = this.handleReference();           // ACMBOM:*A1 (AcmBom)
+			template.ItemFilterCustomHandle = this.handleReference();
+
+			// Handles to each data row (excluding the headers) of the BOM table follow.
+			// Then seemingly always 3 handles of value 0x0 follow 
+
+			ulong handle;
+			while (true)
+			{
+				handle = this.handleReference();
+				if (handle == 0)
+				{
+					break;
+				}
+				template.RowHandles.Add(handle);
+			}
+
+			// ulong handle: 0x0
+			template.UnknownHandle1 = this.handleReference();        // 0x0
+			template.UnknownHandle2 = this.handleReference();        // 0x0
+
+			return template;
+		}
+
+		private void readMechanicalEntity<T>(CadMechanicalEntityTemplate<T> template)
+			where T : MechanicalEntity, new()
+		{
+			var unknown1 = this._mergedReaders.ReadBitLong();   // 212
+			template.CadObject.Position = this._mergedReaders.Read3BitDouble();
+
+			template.StandardDINHandle = this.handleReference();
+			template.BOMStandardDINHandle = this.handleReference();
+		}
+
+		private CadTemplate readAcmBalloon()
+		{
+			AcmBalloon balloon = new AcmBalloon();
+			CadAcmBalloonTemplate template = new CadAcmBalloonTemplate(balloon);
+
+			this.readCommonEntityData(template);
+
+			this.readMechanicalEntity(template);
+
+			var unknown_position1 = this._mergedReaders.Read3BitDouble();
+			var unknown_position2 = this._mergedReaders.Read3BitDouble();
+
+			template.BomRowHandle = this.handleReference();
+			template.BlockHandle = this.handleReference();
+
+			var unknownHandle1 = this.handleReference();        // 0x0
+
+			return template;
+		}
 
 		private CadTemplate readVertex2D()
 		{
